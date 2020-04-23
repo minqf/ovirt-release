@@ -36,6 +36,16 @@ repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
 
+[mnecas-ansible-runner-service]
+name=Copr repo for ansible-runner owned by mnecas
+baseurl=https://copr-be.cloud.fedoraproject.org/results/mnecas/ansible-runner/fedora-$releasever-$basearch/
+type=rpm-md
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/mnecas/ansible-runner/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+
 [mlibra-ovirt-cockpit-sso]
 name=Copr repo for ovirt-cockpit-sso owned by mlibra
 baseurl=https://copr-be.cloud.fedoraproject.org/results/mlibra/ovirt-cockpit-sso/fedora-$releasever-$basearch/
@@ -83,6 +93,17 @@ baseurl=https://copr-be.cloud.fedoraproject.org/results/sac/gluster-ansible/fedo
 type=rpm-md
 gpgcheck=1
 gpgkey=https://copr-be.cloud.fedoraproject.org/results/sac/gluster-ansible/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+
+[ovirt-imageio-preview]
+name=Copr repo for ovirt-imageio-preview owned by nsoffer
+baseurl=https://download.copr.fedorainfracloud.org/results/nsoffer/ovirt-imageio-preview/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/nsoffer/ovirt-imageio-preview/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 enabled_metadata=1
