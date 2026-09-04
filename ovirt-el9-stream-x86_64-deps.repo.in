@@ -1,0 +1,44 @@
+[ovirt-@OVIRT_SLOT@-centos-stream-ovirt45-testing]
+name=CentOS Stream 9 - oVirt 4.5 - testing
+baseurl=https://buildlogs.centos.org/centos/9-stream/virt/$basearch/ovirt-45/
+gpgcheck=0
+enabled=1
+
+[ovirt-@OVIRT_SLOT@-centos-stream-gluster10-testing]
+name=CentOS Stream 9 - Glusterfs 10 - testing
+baseurl=https://buildlogs.centos.org/centos/9-stream/storage/$basearch/gluster-10/
+gpgcheck=0
+enabled=1
+
+[ovirt-@OVIRT_SLOT@-centos-stream-nfv-openvswitch2-testing]
+name=CentOS Stream 9 - NFV OpenVSwitch 2 - testing
+baseurl=https://buildlogs.centos.org/centos/9-stream/nfv/$basearch/openvswitch-2/
+gpgcheck=0
+enabled=1
+module_hotfixes=1
+
+[ovirt-@OVIRT_SLOT@-centos-stream-opstools-collectd5-testing]
+name=CentOS Stream 9 - OpsTools - Collectd 5 - testing
+baseurl=https://buildlogs.centos.org/9-stream/opstools/$basearch/collectd-5/
+gpgcheck=0
+enabled=1
+
+[ovirt-@OVIRT_SLOT@-centos-stream-ceph-pacific-testing]
+name=CentOS Stream 9 - Ceph Pacific - testing
+baseurl=https://buildlogs.centos.org/centos/9-stream/storage/$basearch/ceph-pacific/
+gpgcheck=0
+enabled=1
+
+[ovirt-@OVIRT_SLOT@-centos-stream-openstack-yoga-testing]
+name=CentOS Stream 9 - OpenStack Yoga Repository - testing
+baseurl=https://buildlogs.centos.org/9-stream/cloud/$basearch/openstack-yoga/
+gpgcheck=0
+enabled=1
+exclude=
+ openstack-ansible-core
+ python3-rdo-openvswitch
+ rdo-network-scripts-openvswitch
+ rdo-openvswitch
+ rdo-ovn
+ rdo-ovn-central
+ rdo-ovn-host

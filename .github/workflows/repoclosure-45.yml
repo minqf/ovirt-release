@@ -1,0 +1,127 @@
+---
+name: Check repository closure oVirt 4.5 Release
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Running every Monday
+    - cron: '0 6 * * 1'
+
+env:
+  NON_CBS_PACKAGES: >
+    --pkg java-client-kubevirt
+    --pkg java-ovirt-engine-sdk4
+    --pkg ovirt-node-ng-image-update
+    --pkg ovirt-engine-appliance
+
+jobs:
+  centos-release-ovirt45:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [centos, almalinux]
+        version: [9, 10]
+        include:
+          - os: centos
+            image: "quay.io/centos/centos:stream"
+          - os: almalinux
+            image: "quay.io/almalinuxorg/almalinux:"
+            additional_packages: almalinux-release-devel
+            additional_repos_os: |-
+              --repo devel
+          - version: 9
+            additional_repos: |-
+              --repo appstream \
+              --repo baseos \
+              --repo resilientstorage \
+              --repo crb \
+              --repo centos-ceph-pacific \
+              --repo centos-gluster10 \
+              --repo centos-nfv-openvswitch \
+              --repo centos-opstools \
+              --repo centos-openstack-yoga
+          - version: 10
+            additional_repos: |-
+              --repo appstream \
+              --repo baseos \
+              --repo crb \
+              --repo epel \
+              --repo centos-ceph-squid \
+              --repo centos-nfv-openvswitch
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}${{ matrix.version }}
+      # Workaround for https://github.com/AlmaLinux/container-images/issues/71
+      options: --platform linux/amd64
+
+    steps:
+      - name: Enable repositories
+        run: |
+            dnf distro-sync -y
+            dnf install -y centos-release-ovirt45
+
+      - name: Install additional packages
+        if: ${{ matrix.additional_packages }}
+        run: |
+            dnf install -y ${{ matrix.additional_packages }}
+
+      - name: Run repoclosure on oVirt 4.5 Released content
+        run: |
+            dnf repoclosure --newest --refresh \
+              --check centos-ovirt45 \
+              --check ovirt-45-upstream \
+              ${{ matrix.additional_repos_os }} \
+              ${{ matrix.additional_repos }}
+
+  close-45-issue-on-success:
+    name: Report workflow success
+    runs-on: ubuntu-latest
+    needs:
+      - centos-release-ovirt45
+
+    steps:
+      - name: Checkout
+        uses: ovirt/checkout-action@main
+      - name: Add a comment about successful job and close issue
+        run: |
+          set -e
+          LABEL="repoclosure-45-failed"
+          ISSUENO=$(gh issue list -l $LABEL | awk ' { print $1 } ' | head -n 1)
+          if [ -n "$ISSUENO" ]; then
+              MESSAGE="✅ The oVirt 4.5 repoclosure CI job is now [successful](https://github.com/oVirt/ovirt-release/actions/runs/${{ github.run_id }}), closing issue."
+              gh issue comment "${ISSUENO}" --body "${MESSAGE}"
+              gh issue close "${ISSUENO}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  open-45-issue-on-failure:
+    name: Report workflow failure
+    runs-on: ubuntu-latest
+    if: ${{ always() && (
+      needs.centos-release-ovirt45.result=='failure'
+      ) }}
+    needs:
+      - centos-release-ovirt45
+    steps:
+      - name: Checkout
+        uses: ovirt/checkout-action@main
+      - name: Add a comment about failed job
+        run: |
+          set -e
+          TITLE="Failed oVirt 4.5 repoclosure job"
+          LABEL="repoclosure-45-failed"
+          ISSUENO=$(gh issue list -l $LABEL | awk ' { print $1 } ' | head -n 1)
+          if [ -z "$ISSUENO" ]; then
+              MESSAGE="❌ The repoclosure oVirt 4.5 CI job failed. [Please investigate.](https://github.com/oVirt/ovirt-release/actions/runs/${{ github.run_id }})"
+              gh issue create --title "${TITLE}" --body "${MESSAGE}" --label "${LABEL}"
+          else
+              MESSAGE="❌ The repoclosure oVirt 4.5 CI job is still failing. [Please investigate.](https://github.com/oVirt/ovirt-release/actions/runs/${{ github.run_id }})"
+              gh issue comment "${ISSUENO}" --body "${MESSAGE}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

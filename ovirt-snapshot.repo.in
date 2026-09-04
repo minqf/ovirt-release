@@ -1,13 +1,19 @@
-[ovirt-@OVIRT_SLOT@-snapshot]
-name=Latest oVirt @OVIRT_SLOT@ nightly snapshot
-#baseurl=@OVIRT_YUM_REPO@/pub/ovirt-@OVIRT_SLOT@-snapshot/rpm/@DIST@$releasever/
-@URLKEY@=@OVIRT_YUM_REPO@@REPO_PATH_NORMAL@@DIST@$releasever
-enabled=1
+[ovirt-master-snapshot]
+name=oVirt master snapshot packages
+baseurl=https://resources.ovirt.org/pub/ovirt-master-snapshot/rpm/@OVIRT_DIST@/$basearch/
+skip_if_unavailable=True
 gpgcheck=0
+enabled=1
+enabled_metadata=1
 
-[ovirt-@OVIRT_SLOT@-snapshot-static]
-name=Latest oVirt @OVIRT_SLOT@ additional nightly snapshot
-#baseurl=@OVIRT_YUM_REPO@/pub/ovirt-@OVIRT_SLOT@-snapshot-static/rpm/@DIST@$releasever/
-@URLKEY@=@OVIRT_YUM_REPO@@REPO_PATH_STATIC@@DIST@$releasever
-enabled=1
+[ovirt-appliance-master-snapshot]
+name=oVirt appliance with ovirt-master-snapshot content
+baseurl=https://resources.ovirt.org/repos/ovirt/github-ci/ovirt-appliance/el$releasever/
 gpgcheck=0
+enabled=1
+
+[ovirt-node-master-snapshot]
+name=oVirt Node with ovirt-master-snapshot content
+baseurl=https://resources.ovirt.org/repos/ovirt/github-ci/ovirt-node-ng-image/el$releasever/
+gpgcheck=0
+enabled=1

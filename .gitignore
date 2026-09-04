@@ -1,5 +1,4 @@
 ## files
-Makefile
 Makefile.in
 aclocal.m4
 config.log
@@ -7,6 +6,8 @@ config.status
 configure
 install-sh
 missing
+/Makefile
+/host-node/Makefile
 ## folders
 autom4te.cache
 rpmbuild
@@ -14,5 +15,5 @@ rpmbuild
 .project
 ## patterns
 *.spec
-*.repo
+ovirt*.repo
 ovirt-release-master-*.tar.gz

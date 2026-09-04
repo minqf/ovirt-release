@@ -1,0 +1,135 @@
+---
+name: Build and publish ovirt-release RPMs
+
+permissions:
+  pull-requests: read
+  contents: read
+
+on:
+  push:
+    branches: [master]
+    tags: ['*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: almalinux-9
+            shortcut: el9
+            image: "quay.io/almalinuxorg/almalinux:9"
+          - name: almalinux-10
+            shortcut: el10
+            image: "quay.io/almalinuxorg/almalinux:10"
+          - name: centos-stream-9
+            shortcut: el9s
+            image: "quay.io/centos/centos:stream9"
+          - name: centos-stream-10
+            shortcut: el10s
+            image: "quay.io/centos/centos:stream10"
+
+    name: Build on ${{ matrix.name }}
+    container:
+      image: ${{ matrix.image }}
+
+    steps:
+      - name: Prepare env
+        run: |
+            mkdir -p ${PWD}/tmp.repos/BUILD
+            dnf distro-sync -y
+            dnf install -y --setopt=tsflags=nodocs autoconf automake gettext-devel git systemd make git rpm-build
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Mark git repo as safe
+        run: git config --global --add safe.directory $(pwd)
+
+      - name: Autoreconf
+        run: autoreconf -ivf
+
+      - name: Configure
+        run: ./configure
+
+      - name: Run distcheck
+        run: make -j distcheck
+
+      - name: Build RPM
+        run: |
+            mkdir -p ${PWD}/tmp.repos/SOURCES
+            cp ovirt-release*.tar.gz ${PWD}/tmp.repos/SOURCES
+            TAG=$(git tag --points-at HEAD | head -1)
+            if [[ -n "$TAG" ]]; then
+              if [[ "$TAG" =~ -([0-9]+)$ ]]; then
+                SUFFIX=".${BASH_REMATCH[1]}"
+              else
+                SUFFIX=".1"
+              fi
+            else
+              SUFFIX=".$(date --utc +%Y%m%d%H%M%S).git$(git rev-parse --short HEAD)"
+            fi
+            rpmbuild -D "_topdir ${PWD}/tmp.repos" -D "release_suffix ${SUFFIX}" -ba ovirt-release-master.spec
+            rpmbuild -D "_topdir ${PWD}/tmp.repos" -D "release_suffix ${SUFFIX}" -ba ovirt-release-host-node.spec
+
+      - name: Collect artifacts
+        run: |
+            mkdir -p exported-artifacts
+            find tmp.repos -iname \*rpm -exec mv "{}" exported-artifacts/ \;
+            mv ./*tar.gz exported-artifacts/
+
+      - name: Test install
+        run: |
+            dnf install -y exported-artifacts/ovirt-release-master-4*noarch.rpm
+            dnf --downloadonly install -y exported-artifacts/*noarch.rpm exported-artifacts/*x86_64.rpm
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: rpm-${{ matrix.shortcut }}
+          path: exported-artifacts
+
+  publish-rpms:
+    permissions:
+      artifact-metadata: read
+    needs: build
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    uses: ovirt/ovirt-workflows/.github/workflows/publish-rpms.yml@main
+    secrets: inherit
+
+  publish-public-rpm:
+    name: Publish ovirt-release-master RPM
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        shortcut: [el9, el10, el9s, el10s]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: rpm-${{ matrix.shortcut }}
+          path: artifacts
+
+      - name: Prepare RPM for upload
+        run: |
+            cp artifacts/ovirt-release-master-*.noarch.rpm ovirt-release-master.rpm
+            ls -la ovirt-release-master.rpm
+
+      - name: Upload ovirt-release-master RPM to resources.ovirt.org
+        uses: ovirt/ovirt-resources-upload-action@main
+        with:
+          known_hosts: ${{ secrets.KNOWN_HOSTS_FOR_RESOURCES_OVIRT_ORG }}
+          username: ${{ secrets.SSH_USERNAME_FOR_RESOURCES_OVIRT_ORG }}
+          key: ${{ secrets.SSH_KEY_FOR_RESOURCES_OVIRT_ORG }}
+          source: ovirt-release-master.rpm
+          target: ovirt-master-snapshot/rpm/${{ matrix.shortcut }}/
+          create_target_dir: yes
+          delete_before_upload: yes
